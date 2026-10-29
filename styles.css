@@ -1,0 +1,104 @@
+.pcl-reference {
+    color: var(--text-accent);
+    background: var(--background-modifier-hover);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 0 4px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.pcl-reference:empty::after {
+    content: attr(data-rendered);
+}
+
+.pcl-reference.invalid {
+    color: var(--text-error);
+    background: var(--background-modifier-error);
+    border-color: var(--color-red);
+}
+
+.pcl-numbered-equation {
+    position: relative;
+    box-sizing: border-box;
+    padding-inline: 3.25em;
+}
+
+.pcl-numbered-equation::after {
+    content: attr(data-pcl-equation-number);
+    position: absolute;
+    right: 0.65em;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-normal);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.cm-embed-block:has(.pcl-equation-number) {
+    position: relative;
+    box-sizing: border-box;
+    padding-inline: 3.25em;
+}
+
+.pcl-equation-number {
+    position: absolute;
+    right: 0.65em;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-normal);
+    font-family: var(--font-interface);
+    font-size: var(--font-ui-medium);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.pcl-equation-popover {
+    position: fixed;
+    z-index: var(--layer-popover, 1000);
+    max-height: min(70vh, 520px);
+    overflow: auto;
+    padding: 12px 16px 14px;
+    color: var(--text-normal);
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m, 8px);
+    box-shadow: var(--shadow-l, 0 8px 28px rgba(0, 0, 0, 0.22));
+    pointer-events: none;
+}
+
+.pcl-equation-popover-title {
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-family: var(--font-interface);
+    font-size: var(--font-ui-smaller);
+    font-weight: 600;
+}
+
+.pcl-equation-popover-math {
+    min-width: 220px;
+    overflow-x: auto;
+    text-align: center;
+}
+
+.pcl-equation-popover-math .math-block {
+    margin: 0;
+    padding: 0;
+}
+
+.pcl-highlight-line {
+    animation: pcl-highlight-fade 1.5s ease-out;
+}
+
+@keyframes pcl-highlight-fade {
+    from {
+        background: var(--text-highlight-bg);
+    }
+    to {
+        background: transparent;
+    }
+}

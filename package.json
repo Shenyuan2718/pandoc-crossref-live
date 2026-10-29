@@ -1,0 +1,19 @@
+{
+  "name": "pandoc-crossref-live",
+  "version": "0.1.0",
+  "description": "Obsidian plugin for live Pandoc equation, figure, and table cross-references.",
+  "main": "main.js",
+  "scripts": {
+    "check": "node --check main.js",
+    "test": "node --test test/parser.test.cjs"
+  },
+  "keywords": [
+    "obsidian",
+    "pandoc",
+    "crossref",
+    "equations",
+    "figures",
+    "tables"
+  ],
+  "license": "MIT"
+}
