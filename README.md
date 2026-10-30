@@ -15,6 +15,7 @@ An Obsidian plugin written in plain JavaScript for live Pandoc-style equation, f
 - Sequential equation numbers displayed at the right
 - Rendered LaTeX equation previews on hover
 - Reading view and live editing view support
+- Existing-label autocomplete while typing cross-reference IDs
 - Leaves regular Pandoc bibliography citations such as `[@smith2020]` untouched
 - Designed to coexist with Pandoc Reference List
 
@@ -63,6 +64,11 @@ styles.css
 - Show rendered equations on hover
 - Enable live editing rendering
 - Recognize bare references
+- Enable cross-reference label autocomplete
+
+Typing `[@eq`, `[@fig`, or `[@tbl` lists matching labels from the current note, whether or not a colon has already been typed. The first matching candidate is preselected; use the arrow keys to choose another label and press Enter to insert it. Continue typing part of an ID to filter the list. Suggestions display the rendered number and available equation content or caption. If bare references are enabled, `@eq`, `@fig`, and `@tbl` also provide autocomplete.
+
+Autocomplete intentionally starts only after a known cross-reference type. It takes priority for those three types but leaves ordinary bibliography suggestions such as `[@smith2020]` to Pandoc Reference List.
 
 The `#` placeholder is replaced with the relevant number:
 
@@ -110,6 +116,7 @@ npm test
 - 在公式右侧显示顺序编号
 - 鼠标悬停公式引用时显示渲染后的公式
 - 同时支持阅读视图和实时编辑视图
+- 输入交叉引用时自动补全当前笔记中的已有标签
 - 不处理普通 Pandoc 文献引用，例如 `[@smith2020]`
 - 与 Pandoc Reference List 插件共存
 
@@ -224,6 +231,11 @@ styles.css
 - 悬停显示公式
 - 实时编辑视图渲染
 - 同时识别裸引用
+- 引用标签自动补全
+
+输入 `[@eq`、`[@fig` 或 `[@tbl` 后（不要求已经输入冒号），插件会列出当前笔记中匹配的已有标签。首个匹配项会预先选中，可用方向键切换，按回车插入；继续输入标签的一部分即可过滤。候选会同时显示渲染后的编号，以及公式开头或图表题注。开启裸引用后，`@eq`、`@fig` 和 `@tbl` 也会提供补全。
+
+补全只在已经输入交叉引用类型后启动。它对 `eq`、`fig`、`tbl` 三类引用优先响应，但 `[@smith2020]` 等普通文献引用仍交给 Pandoc Reference List。
 
 格式模板中的 `#` 会被替换为对应编号。例如：
 

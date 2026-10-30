@@ -1,4 +1,5 @@
 const {
+    EditorSuggest,
     MarkdownRenderer,
     MarkdownView,
     Plugin,
@@ -17,6 +18,7 @@ const DEFAULT_SETTINGS = {
     enableHoverPreview: true,
     enableLiveRendering: true,
     enableBareReferences: false,
+    enableLabelSuggestions: true,
 };
 
 const DEFINITION_TAG_RE = /\s*\{#(?:eq|fig|tbl):[^}\r\n]+\}/g;
@@ -32,6 +34,7 @@ const FIGURE_SAME_LINE_RE =
     /^[ \t]*!\[([^\]]*)\]\([^)]*\)[ \t]*(\{#fig:[^}\r\n]+\})[ \t]*$/;
 const STANDALONE_TAG_RE =
     /^[ \t]*\{#(eq|fig|tbl):([^}\r\n]+)\}[ \t]*$/;
+const SUGGESTION_TYPES = new Set(["eq", "fig", "tbl"]);
 
 function stripCarriageReturn(line) {
     return line.endsWith("\r") ? line.slice(0, -1) : line;
@@ -284,6 +287,93 @@ function referenceText(definition, settings) {
               ? settings.figureReferenceFormat
               : settings.tableReferenceFormat;
     return formatTemplate(template, definition.number);
+}
+
+function parseLabelSuggestionTrigger(text, allowBareReferences = false) {
+    const bracketOpenMatch = /\[@(eq|fig|tbl)(?::([^\]\s]*))?$/.exec(text);
+    if (bracketOpenMatch) {
+        return {
+            start: bracketOpenMatch.index,
+            type: bracketOpenMatch[1],
+            query: bracketOpenMatch[2] || "",
+            bracket: true,
+        };
+    }
+
+    const bracketClosedTypeMatch = /\[@(eq|fig|tbl)\]$/.exec(text);
+    if (bracketClosedTypeMatch) {
+        return {
+            start: bracketClosedTypeMatch.index,
+            type: bracketClosedTypeMatch[1],
+            query: "",
+            bracket: true,
+        };
+    }
+
+    if (!allowBareReferences) return null;
+    const bareMatch = /(^|[^\w\\])@(eq|fig|tbl)(?::([^\]\s]*))?$/.exec(text);
+    if (!bareMatch) return null;
+
+    return {
+        start: bareMatch.index + (bareMatch[1] || "").length,
+        type: bareMatch[2],
+        query: bareMatch[3] || "",
+        bracket: false,
+    };
+}
+
+function collectLabelSuggestions(source, type, query, settings) {
+    if (!SUGGESTION_TYPES.has(type)) return [];
+
+    const model = parseDocumentModel(source, {
+        allowBareReferences: settings.enableBareReferences,
+        settings,
+    });
+    const normalizedQuery = String(query || "").trim().toLowerCase();
+    const seen = new Set();
+    const suggestions = [];
+
+    for (const definition of model.definitions) {
+        if (definition.type !== type) continue;
+        const key = `${definition.type}:${definition.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        const normalizedId = definition.id.toLowerCase();
+        if (normalizedQuery && !normalizedId.includes(normalizedQuery)) continue;
+
+        const detail = String(definition.caption || definition.body || "")
+            .replace(/\s+/g, " ")
+            .trim();
+        suggestions.push({
+            type: definition.type,
+            id: definition.id,
+            number: definition.number,
+            rendered: referenceText(definition, settings),
+            detail,
+            queryMatch: normalizedId.startsWith(normalizedQuery) ? 0 : 1,
+        });
+    }
+
+    return suggestions.sort(
+        (left, right) =>
+            left.queryMatch - right.queryMatch ||
+            left.number - right.number ||
+            left.id.localeCompare(right.id)
+    );
+}
+
+function prioritizeEditorSuggest(app, suggestion) {
+    const suggests = app?.workspace?.editorSuggest?.suggests;
+    if (!Array.isArray(suggests)) return false;
+
+    const index = suggests.indexOf(suggestion);
+    if (index < 0) return false;
+    if (index > 0) {
+        suggests.splice(index, 1);
+        suggests.unshift(suggestion);
+    }
+    return true;
 }
 
 function findTextNodeReferences(text, model, settings) {
@@ -646,6 +736,100 @@ class EquationNumberWidget extends WidgetType {
     }
 }
 
+class CrossrefLabelSuggest extends EditorSuggest {
+    constructor(app, plugin) {
+        super(app);
+        this.plugin = plugin;
+        this.pendingType = null;
+        this.pendingBracket = true;
+        this.limit = 80;
+        this.setInstructions([
+            { command: "↑↓", purpose: "选择引用标签" },
+            { command: "↵", purpose: "插入标签" },
+        ]);
+    }
+
+    onTrigger(cursor, editor, file) {
+        this.pendingType = null;
+        if (!this.plugin.settings.enableLabelSuggestions) {
+            return null;
+        }
+
+        const line = editor.getLine(cursor.line);
+        const trigger = parseLabelSuggestionTrigger(
+            line.slice(0, cursor.ch),
+            this.plugin.settings.enableBareReferences
+        );
+        if (!trigger) return null;
+
+        this.pendingType = trigger.type;
+        this.pendingBracket = trigger.bracket;
+        return {
+            start: { line: cursor.line, ch: trigger.start },
+            end: cursor,
+            query: trigger.query,
+        };
+    }
+
+    getSuggestions(context) {
+        try {
+            const suggestions = collectLabelSuggestions(
+                context.editor.getValue(),
+                this.pendingType,
+                context.query,
+                this.plugin.settings
+            );
+            return suggestions;
+        } catch (error) {
+            console.error("[Pandoc Crossref Live] Label suggestion error", error);
+            return [];
+        }
+    }
+
+    renderSuggestion(suggestion, element) {
+        element.addClass("pcl-suggestion");
+        element.createSpan({
+            cls: "pcl-suggestion-label",
+            text: suggestion.id,
+        });
+        element.createSpan({
+            cls: "pcl-suggestion-number",
+            text: suggestion.rendered,
+        });
+        if (suggestion.detail) {
+            element.createSpan({
+                cls: "pcl-suggestion-detail",
+                text: suggestion.detail,
+            });
+        }
+    }
+
+    selectSuggestion(suggestion) {
+        const context = this.context;
+        if (!context) return;
+
+        const { editor, start, end } = context;
+        const replacement = this.pendingBracket
+            ? `[@${suggestion.type}:${suggestion.id}]`
+            : `@${suggestion.type}:${suggestion.id}`;
+        const currentLine = editor.getLine(end.line);
+        const replacementEnd = {
+            line: end.line,
+            ch:
+                this.pendingBracket && currentLine[end.ch] === "]"
+                    ? end.ch + 1
+                    : end.ch,
+        };
+
+        editor.replaceRange(replacement, start, replacementEnd);
+        editor.setCursor({
+            line: start.line,
+            ch: start.ch + replacement.length,
+        });
+        this.close();
+    }
+}
+
 function createLiveExtension(plugin) {
     return EditorView.decorations.compute(["doc", "selection"], (state) => {
         if (!plugin.settings.enableLiveRendering) return Decoration.none;
@@ -818,6 +1002,20 @@ class PandocCrossrefLiveSettingTab extends PluginSettingTab {
                         refreshViews(this.app);
                     })
             );
+
+        new Setting(containerEl)
+            .setName("引用标签自动补全")
+            .setDesc(
+                "输入 [@eq:、[@fig: 或 [@tbl: 后，从当前笔记的已有标签中选择"
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.enableLabelSuggestions)
+                    .onChange(async (value) => {
+                        this.plugin.settings.enableLabelSuggestions = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
     }
 }
 
@@ -853,6 +1051,11 @@ module.exports = class PandocCrossrefLivePlugin extends Plugin {
         });
 
         this.registerEditorExtension(createLiveExtension(this));
+        this.labelSuggest = new CrossrefLabelSuggest(this.app, this);
+        this.registerEditorSuggest(this.labelSuggest);
+        this.app.workspace.onLayoutReady(() => {
+            prioritizeEditorSuggest(this.app, this.labelSuggest);
+        });
     }
 
     async loadSettings() {
@@ -865,7 +1068,11 @@ module.exports = class PandocCrossrefLivePlugin extends Plugin {
 };
 
 module.exports.__test = {
+    CrossrefLabelSuggest,
     parseDocumentModel,
+    parseLabelSuggestionTrigger,
+    collectLabelSuggestions,
+    prioritizeEditorSuggest,
     formatTemplate,
     referenceText,
     maskCode,

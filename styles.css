@@ -90,6 +90,36 @@
     padding: 0;
 }
 
+.pcl-suggestion {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55em;
+    min-width: 0;
+}
+
+.pcl-suggestion-label {
+    color: var(--text-normal);
+    font-family: var(--font-monospace);
+    font-weight: 600;
+}
+
+.pcl-suggestion-number {
+    flex: none;
+    color: var(--text-accent);
+    font-size: var(--font-ui-smaller);
+    white-space: nowrap;
+}
+
+.pcl-suggestion-detail {
+    min-width: 0;
+    margin-left: auto;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .pcl-highlight-line {
     animation: pcl-highlight-fade 1.5s ease-out;
 }

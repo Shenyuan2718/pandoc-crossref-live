@@ -1,9 +1,10 @@
 {
   "id": "pandoc-crossref-live",
   "name": "Pandoc Crossref Live",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minAppVersion": "1.8.0",
   "description": "Live Pandoc-style equation, figure, and table cross-references with equation numbering and hover previews.",
-  "author": "Pandoc Crossref Live contributors",
+  "author": "Shenyuan2718",
+  "authorUrl": "https://github.com/Shenyuan2718",
   "isDesktopOnly": false
 }

@@ -1,6 +1,6 @@
 # Test Report
 
-Test date: 2026-10-29
+Test date: 2026-10-30
 
 Environment: Obsidian 1.14.5, isolated test vault, Pandoc Reference List 2.0.25.
 
@@ -16,6 +16,11 @@ Environment: Obsidian 1.14.5, isolated test vault, Pandoc Reference List 2.0.25.
 - Code spans and fenced code blocks: no replacement.
 - Non-crossref bibliography keys such as `[@smith2020]`: ignored by this plugin.
 - Current thesis note: 11 equations and 25 equation references parsed; `equation-matrix` resolved to `式5`.
+- Bracket-reference trigger detection: pass.
+- Bare-reference trigger detection follows the setting: pass.
+- Existing-label filtering, ordering, and deduplication: pass.
+- Completion priority over Pandoc Reference List for crossref types: pass.
+- Obsidian-specific completion context compatibility: pass.
 
 ## Obsidian live preview
 
@@ -25,6 +30,11 @@ Environment: Obsidian 1.14.5, isolated test vault, Pandoc Reference List 2.0.25.
 - Table reference: pass.
 - Rendered equation hover preview: pass.
 - No loading-placeholder text: pass.
+- Label completion after `[@eq` without a colon: pass.
+- First matching label preselected: pass.
+- ID filtering and filtered insertion: pass.
+- Figure label completion after `[@fig`: pass.
+- Table label completion after `[@tbl`: pass.
 - Pandoc Reference List numeric citation `[1]`: pass.
 - Normal bibliography key left untouched by this plugin: pass.
 - Inline and fenced code protection: pass.
